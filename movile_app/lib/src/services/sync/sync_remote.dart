@@ -5,6 +5,12 @@ import 'package:splitway_core/splitway_core.dart';
 /// fake backend without a live Supabase client. [SupabaseRepository]
 /// implements this in addition to [OfficialRoutesRemote].
 abstract class SyncRemote {
+  /// Whether the backend currently has an authenticated session. When false,
+  /// requests would go out with the anon key and privileged RPCs (e.g.
+  /// `upsert_route_with_sectors`) reject them with a 42501. [SyncService] uses
+  /// this to skip a sync instead of surfacing a noisy failure.
+  bool get hasSession;
+
   // Routes
   Future<Map<String, DateTime>> fetchRouteTimestamps();
   Future<List<RouteTemplate>> fetchAllRoutes();

@@ -18,6 +18,8 @@ import 'package:splitway_mobile/src/services/sync/sync_service.dart';
 class _FakeSyncRemote implements SyncRemote {
   int passes = 0;
   Completer<void>? gate;
+  @override
+  bool hasSession = true;
 
   @override
   Future<Map<String, DateTime>> fetchRouteTimestamps() async {
@@ -91,6 +93,19 @@ void main() {
     local.userId = 'u2'; // resets the debounce
     await Future<void>.delayed(const Duration(milliseconds: 80));
     expect(remote.passes, 1);
+  });
+
+  test('does not sync while there is no authenticated session', () async {
+    // A lost session (e.g. a stale refresh token forced a signOut) would make
+    // requests go out as anon and RPCs reject them with a 42501. The guard must
+    // skip the sync entirely and keep the changes pending for a later retry.
+    remote.hasSession = false;
+
+    local.userId = 'u1'; // fires a change → arms the debounce
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+
+    expect(remote.passes, 0);
+    expect(sync.hasPendingChanges, isTrue);
   });
 
   test('changes emitted while a sync is in flight are ignored', () async {

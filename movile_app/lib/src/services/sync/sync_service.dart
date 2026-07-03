@@ -183,6 +183,12 @@ class SyncService extends ChangeNotifier {
       notifyListeners();
       return 0;
     }
+    // Never sync without an authenticated session. When the session is lost
+    // (e.g. a stale refresh token forced a signOut), requests would go out with
+    // the anon key and RPCs like upsert_route_with_sectors reject anon with a
+    // 42501, surfacing as a noisy "full sync failed". Skip silently, leaving
+    // status and pending changes untouched so it retries once a session is back.
+    if (!remote.hasSession) return 0;
 
     _status = SyncStatus.syncing;
     _lastError = null;

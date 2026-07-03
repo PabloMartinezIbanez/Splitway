@@ -25,6 +25,13 @@ class SupabaseRepository implements OfficialRoutesRemote, SyncRemote {
 
   String get _uid => _client.auth.currentUser!.id;
 
+  /// True when a Supabase session is present. If a persisted refresh token was
+  /// rejected (`refresh_token_already_used`), Supabase clears the session and
+  /// requests fall back to the anon key — [SyncService] checks this to avoid
+  /// firing writes that would be rejected with a 42501.
+  @override
+  bool get hasSession => _client.auth.currentSession != null;
+
   // ---------- Routes ----------
 
   /// Upserts a route template (with sectors) to Supabase.

@@ -373,8 +373,11 @@ void main() {
       expect(sectorCrossings.length, 2);
       expect(sectorCrossings[0].sectorId, 'sec-1');
       expect(sectorCrossings[1].sectorId, kFinalSectorId);
-      // No laps — open route.
-      expect(received.whereType<LapClosed>().length, 0);
+      // The full traversal (start gate → finish) counts as one completed lap.
+      final lapEvents = received.whereType<LapClosed>().toList();
+      expect(lapEvents.length, 1);
+      expect(lapEvents.first.lap.lapNumber, 1);
+      expect(lapEvents.first.lap.completed, isTrue);
       // Auto-finished via proximity.
       expect(received.whereType<TrackingFinished>().length, 1);
       expect(engine.snapshot.status, TrackingStatus.finished);
@@ -409,7 +412,7 @@ void main() {
       await engine.dispose();
     });
 
-    test('finish() before reaching end produces no laps', () async {
+    test('finish() before reaching end records an incomplete lap', () async {
       final route = buildOpenRoute();
       final base = DateTime.parse('2026-04-29T10:00:00Z');
       final engine = TrackingEngine(
@@ -421,9 +424,31 @@ void main() {
       engine.ingest(_p(0.0015, 0.0008, base.add(const Duration(seconds: 4))));
 
       final session = engine.finish();
-      expect(session.laps, isEmpty);
+      // Covered ~110 m since the start gate → recorded as one incomplete lap,
+      // mirroring closed-route behaviour.
+      expect(session.laps.length, 1);
+      expect(session.laps.first.completed, isFalse);
       expect(session.sectorSummaries.length, 1);
       expect(session.totalDistanceMeters, greaterThan(0));
+
+      await engine.dispose();
+    });
+
+    test('finish() right after the start gate records no lap', () async {
+      final route = buildOpenRoute();
+      final base = DateTime.parse('2026-04-29T10:00:00Z');
+      final engine = TrackingEngine(
+          route: route, sessionId: 'open-3b', clock: () => base);
+
+      engine.start();
+      engine.ingest(_p(-0.0005, 0, base));
+      // Cross the start gate…
+      engine.ingest(_p(0.0005, 0.0008, base.add(const Duration(seconds: 1))));
+      // …then barely move (< _minIncompleteLapMeters) and finish.
+      engine.ingest(_p(0.00051, 0.0008, base.add(const Duration(seconds: 2))));
+
+      final session = engine.finish();
+      expect(session.laps, isEmpty);
 
       await engine.dispose();
     });
@@ -442,7 +467,11 @@ void main() {
       engine.ingest(_p(0.002, 0.00005, base.add(const Duration(seconds: 7))));
 
       final session = engine.finish();
-      expect(session.laps, isEmpty);
+      // Auto-finish recorded the completed lap; finish() after that must not
+      // add a second one.
+      expect(session.laps.length, 1);
+      expect(session.laps.first.completed, isTrue);
+      expect(session.laps.first.lapNumber, 1);
       // sec-1 plus the implicit final sector recorded on auto-finish.
       expect(session.sectorSummaries.length, 2);
       expect(session.sectorSummaries.last.sectorId, kFinalSectorId);
