@@ -58,12 +58,19 @@ jobs:
 
       - name: Detect project type
         id: detect
+        env:
+          IOS_PATH: ${{ inputs.ios_path }}
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          # The app project root is the parent of the iOS project folder
+          # (e.g. ios_path "movile_app/ios" -> project root "movile_app")
+          PROJECT_ROOT=$(dirname "$IOS_PATH")
+          echo "project_root=$PROJECT_ROOT" >> $GITHUB_OUTPUT
+
+          if [ -f "$PROJECT_ROOT/pubspec.yaml" ]; then
             echo "type=flutter" >> $GITHUB_OUTPUT
-          elif [ -f "package.json" ] && grep -q '"expo"' package.json; then
+          elif [ -f "$PROJECT_ROOT/package.json" ] && grep -q '"expo"' "$PROJECT_ROOT/package.json"; then
             echo "type=expo" >> $GITHUB_OUTPUT
-          elif [ -f "package.json" ] && grep -q '"react-native"' package.json; then
+          elif [ -f "$PROJECT_ROOT/package.json" ] && grep -q '"react-native"' "$PROJECT_ROOT/package.json"; then
             echo "type=reactnative" >> $GITHUB_OUTPUT
           else
             echo "type=native" >> $GITHUB_OUTPUT
@@ -79,6 +86,7 @@ jobs:
 
       - name: Flutter pub get
         if: steps.detect.outputs.type == 'flutter'
+        working-directory: ${{ steps.detect.outputs.project_root }}
         run: flutter pub get
 
       - name: Setup Node.js
@@ -92,13 +100,14 @@ jobs:
         uses: actions/cache@v4
         id: node-modules-cache
         with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json', 'yarn.lock') }}
+          path: ${{ steps.detect.outputs.project_root }}/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles(format('{0}/package-lock.json', steps.detect.outputs.project_root), format('{0}/yarn.lock', steps.detect.outputs.project_root)) }}
           restore-keys: |
             node-modules-${{ runner.os }}-
 
       - name: Install pnpm dependencies
         if: (steps.detect.outputs.type == 'reactnative' || steps.detect.outputs.type == 'expo') && steps.node-modules-cache.outputs.cache-hit != 'true'
+        working-directory: ${{ steps.detect.outputs.project_root }}
         run: pnpm install
 
       - name: Restore Pods cache
