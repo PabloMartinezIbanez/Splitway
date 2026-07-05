@@ -1,9 +1,9 @@
 name: splitway_mobile
-description: "Splitway — cronómetro inteligente para rutas. Iter 4: Auth + UI/UX."
+description: "Splitway — cronómetro inteligente para rutas."
 
 publish_to: 'none'
 
-version: 0.4.0+1
+version: 1.34.8
 
 environment:
   sdk: ^3.5.0
