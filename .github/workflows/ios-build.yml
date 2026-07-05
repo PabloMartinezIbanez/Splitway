@@ -89,6 +89,26 @@ jobs:
         working-directory: ${{ steps.detect.outputs.project_root }}
         run: flutter pub get
 
+      # env/local.json is gitignored (holds Mapbox/Supabase credentials) and is
+      # bundled as a Flutter asset, so it must exist before `flutter build ios`.
+      - name: Write env/local.json
+        if: steps.detect.outputs.type == 'flutter'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+          MAPBOX_STYLE_URI: ${{ secrets.MAPBOX_STYLE_URI || 'mapbox://styles/mapbox/streets-v12' }}
+          MAPBOX_BASE_URL: ${{ secrets.MAPBOX_BASE_URL || 'https://api.mapbox.com' }}
+        run: |
+          jq -n \
+            --arg supabase_url "$SUPABASE_URL" \
+            --arg supabase_anon_key "$SUPABASE_ANON_KEY" \
+            --arg mapbox_token "$MAPBOX_ACCESS_TOKEN" \
+            --arg mapbox_style "$MAPBOX_STYLE_URI" \
+            --arg mapbox_base "$MAPBOX_BASE_URL" \
+            '{SUPABASE_URL: $supabase_url, SUPABASE_ANON_KEY: $supabase_anon_key, MAPBOX_ACCESS_TOKEN: $mapbox_token, MAPBOX_STYLE_URI: $mapbox_style, MAPBOX_BASE_URL: $mapbox_base}' \
+            > "${{ steps.detect.outputs.project_root }}/env/local.json"
+
       - name: Setup Node.js
         if: steps.detect.outputs.type == 'reactnative' || steps.detect.outputs.type == 'expo'
         uses: actions/setup-node@v4
@@ -201,10 +221,10 @@ jobs:
             cd ..
             if [ "$CONFIGURATION" = "Debug" ]; then
               echo "Building Flutter iOS Debug..."
-              flutter build ios --debug --no-codesign
+              flutter build ios --debug --no-codesign --verbose
             else
               echo "Building Flutter iOS Release..."
-              flutter build ios --release --no-codesign
+              flutter build ios --release --no-codesign --verbose
             fi
             cd "$IOS_PATH"
           elif [ "$PROJECT_TYPE" = "reactnative" ] || [ "$PROJECT_TYPE" = "expo" ]; then
