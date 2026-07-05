@@ -49,3 +49,4 @@ admin/.pnpm-store/*
 
 .agents/*
 skills*.json
+builder-windows-amd64.exe

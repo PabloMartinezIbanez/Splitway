@@ -1,0 +1,16 @@
+{
+  "project": "Splitway",
+  "platform": "ios",
+  "github": {
+    "owner": "PabloMartinezIbanez",
+    "repo": "Splitway"
+  },
+  "ios": {
+    "path": "movile_app\\ios"
+  },
+  "flutter": {
+    "watch": {}
+  },
+  "reactNative": {},
+  "mobai": {}
+}
