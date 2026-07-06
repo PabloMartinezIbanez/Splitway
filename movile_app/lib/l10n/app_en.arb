@@ -38,7 +38,7 @@
   "drawerSyncSyncing": "SYNCING…",
   "drawerSyncError": "SYNC ERROR",
   "drawerSyncOffline": "OFFLINE",
-  "drawerSyncNow": "Sync now",
+  "drawerSyncPending": "PENDING CHANGES",
   "drawerProfile": "Profile",
 
   "loginBannerDefault": "Sign in to continue",

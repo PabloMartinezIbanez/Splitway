@@ -6,6 +6,8 @@ import '../../services/auth/auth_service.dart';
 import '../../services/profile/profile_service.dart';
 import '../../services/sync/sync_service.dart';
 
+import 'sync_status_display.dart';
+
 /// Dark-minimal drawer for Splitway.
 ///
 /// When the user is logged in it shows avatar + name + sync status + menu.
@@ -313,106 +315,37 @@ class _SyncSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final status = syncService.status;
-    final (dotColor, label) = switch (status) {
-      SyncStatus.idle => (const Color(0xFF4CAF50), _idleLabel(l)),
-      SyncStatus.syncing => (const Color(0xFF42A5F5), l.drawerSyncSyncing),
-      SyncStatus.error => (const Color(0xFFEF5350), l.drawerSyncError),
-      SyncStatus.success => (const Color(0xFF4CAF50), _idleLabel(l)),
-      SyncStatus.offline => (const Color(0xFFFF9800), l.drawerSyncOffline),
-    };
+    final (dotColor, label) = syncStatusDisplay(
+      syncService.status,
+      syncService.hasPendingChanges,
+      syncService.lastSyncedAt,
+      l,
+    );
 
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF78909C),
-                  fontSize: 10,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+            ),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 40,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF2E7D32), Color(0xFF43A047)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: status == SyncStatus.syncing
-                      ? null
-                      : () => syncService.sync(),
-                  child: Center(
-                    child: status == SyncStatus.syncing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('↻',
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 14)),
-                              const SizedBox(width: 6),
-                              Text(
-                                l.drawerSyncNow,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-              ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF78909C),
+              fontSize: 10,
+              letterSpacing: 0.5,
             ),
           ),
         ],
       ),
     );
-  }
-
-  String _idleLabel(AppLocalizations l) {
-    final last = syncService.lastSyncedAt;
-    if (last == null) return l.drawerSyncSynced;
-    final diff = DateTime.now().difference(last);
-    if (diff.inMinutes < 1) return l.drawerSyncSyncedNow;
-    if (diff.inMinutes < 60) return l.drawerSyncSyncedMinutes(diff.inMinutes);
-    final time =
-        '${last.hour}:${last.minute.toString().padLeft(2, '0')}';
-    return l.drawerSyncSyncedAt(time);
   }
 }
 

@@ -10,7 +10,7 @@ class LogListTile extends StatelessWidget {
   final LogEntry entry;
   final VoidCallback onTap;
 
-  static final _fmt = DateFormat('HH:mm:ss');
+  static final _fmt = DateFormat('dd/MM/yyyy HH:mm:ss');
 
   Color _colorFor(LogLevel l) => switch (l) {
         LogLevel.debug => Colors.grey,

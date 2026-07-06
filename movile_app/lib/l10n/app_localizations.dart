@@ -278,11 +278,11 @@ abstract class AppLocalizations {
   /// **'OFFLINE'**
   String get drawerSyncOffline;
 
-  /// No description provided for @drawerSyncNow.
+  /// No description provided for @drawerSyncPending.
   ///
   /// In en, this message translates to:
-  /// **'Sync now'**
-  String get drawerSyncNow;
+  /// **'PENDING CHANGES'**
+  String get drawerSyncPending;
 
   /// No description provided for @drawerProfile.
   ///

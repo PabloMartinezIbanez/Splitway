@@ -211,11 +211,12 @@ class TrackingEngine {
       return _buildSession(endedAt: _finishedAt);
     }
     final endedAt = _clock();
-    // Only record an incomplete lap for closed routes if enough distance
-    // was covered. This avoids saving a phantom lap when the session ends
-    // right after crossing the start/finish gate.
-    if (_route.isClosed &&
-        _status == TrackingStatus.inLap &&
+    // Record an incomplete lap (open or closed route) only if enough distance
+    // was covered. This avoids saving a phantom lap when the session ends right
+    // after crossing the start/finish gate. Open routes that reach the finish
+    // auto-finish first (status == finished, handled above), so this branch
+    // only fires when the user stops before the end.
+    if (_status == TrackingStatus.inLap &&
         _lapStartedAt != null &&
         _lapDistanceAccumulator >= _minIncompleteLapMeters) {
       _laps.add(_buildLap(
@@ -259,7 +260,8 @@ class TrackingEngine {
       return;
     }
     if (_status == TrackingStatus.inLap && _lapStartedAt != null) {
-      // Open routes have no laps — ignore subsequent start/finish crossings.
+      // Open routes don't loop: ignore re-crossings of the start/finish gate.
+      // Their single lap is closed when the route finishes (_finishOpenRoute).
       if (!_route.isClosed) return;
 
       // The lap closes at the start/finish line, which is also the end of the
@@ -286,6 +288,16 @@ class TrackingEngine {
   void _finishOpenRoute(DateTime at) {
     // The last path point ends the implicit final sector (last gate → finish).
     _recordFinalSector(at);
+    // The full traversal from the start gate to the finish is one completed
+    // lap — record it so a finished open route reports 1 lap, not 0.
+    if (_lapStartedAt != null) {
+      final closed = _buildLap(endedAt: at, completed: true);
+      _laps.add(closed);
+      if (_bestLap == null || closed.duration < _bestLap!) {
+        _bestLap = closed.duration;
+      }
+      _events.add(LapClosed(at: at, lap: closed));
+    }
     _finishedAt = at;
     _status = TrackingStatus.finished;
     _events.add(TrackingFinished(at));
