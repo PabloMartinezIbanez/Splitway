@@ -291,6 +291,8 @@ class AppRouter {
           profileService: profileService,
           settingsController: settingsController,
           routeEditorController: _editorController,
+          sessionController: _sessionController,
+          freeRideController: _freeRideController,
         ),
         branches: [
           StatefulShellBranch(

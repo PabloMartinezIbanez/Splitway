@@ -12,6 +12,8 @@ import '../../services/sync/sync_service.dart';
 import '../../shared/widgets/app_drawer.dart';
 import '../auth/login_screen.dart';
 import '../editor/route_editor_controller.dart';
+import '../free_ride/free_ride_controller.dart';
+import '../session/live_session_controller.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({
@@ -22,6 +24,8 @@ class HomeShell extends StatefulWidget {
     this.syncService,
     this.profileService,
     this.routeEditorController,
+    this.sessionController,
+    this.freeRideController,
   });
 
   final StatefulNavigationShell shell;
@@ -33,6 +37,14 @@ class HomeShell extends StatefulWidget {
   /// Used to hide the bottom navigation bar while a route is being drawn,
   /// so the user can only leave the drawing screen via its own close button.
   final RouteEditorController? routeEditorController;
+
+  /// Used to hide the bottom navigation bar while a session recording (on a
+  /// pre-made route) is in progress.
+  final LiveSessionController? sessionController;
+
+  /// Used to hide the bottom navigation bar while a free ride recording is
+  /// in progress.
+  final FreeRideController? freeRideController;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -94,6 +106,8 @@ class _HomeShellState extends State<HomeShell> {
       if (widget.authService != null) widget.authService!,
       if (widget.profileService != null) widget.profileService!,
       if (widget.routeEditorController != null) widget.routeEditorController!,
+      if (widget.sessionController != null) widget.sessionController!,
+      if (widget.freeRideController != null) widget.freeRideController!,
     ];
     if (listenables.isEmpty) return _buildScaffold(context);
 
@@ -104,9 +118,22 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Widget _buildScaffold(BuildContext context) {
-    // While drawing a route the bottom nav is hidden so the user can only
-    // leave via the drawing screen's own close button.
+    // While drawing a route, or recording a session/free ride, the bottom
+    // nav is hidden so those full-screen flows aren't interrupted by the
+    // tab bar; the user can only leave via each screen's own controls.
     final drawing = widget.routeEditorController?.drawing ?? false;
+    final recordingSession = switch (widget.sessionController?.stage) {
+      LiveSessionStage.running ||
+      LiveSessionStage.paused ||
+      LiveSessionStage.summary =>
+        true,
+      _ => false,
+    };
+    final recordingFreeRide = switch (widget.freeRideController?.stage) {
+      FreeRideStage.recording || FreeRideStage.paused => true,
+      _ => false,
+    };
+    final hideBottomNav = drawing || recordingSession || recordingFreeRide;
     return Scaffold(
       // The drawer can only be opened via the hamburger button, not by
       // dragging from the left edge.
@@ -123,7 +150,7 @@ class _HomeShellState extends State<HomeShell> {
             )
           : null,
       body: widget.shell,
-      bottomNavigationBar: drawing
+      bottomNavigationBar: hideBottomNav
           ? null
           : NavigationBar(
         selectedIndex: widget.shell.currentIndex,
