@@ -171,6 +171,7 @@
   "editorRouteSavedSnack": "Guardada \"{name}\"",
   "@editorRouteSavedSnack": { "placeholders": { "name": { "type": "String" } } },
   "editorSnapFailedMessage": "No se pudo conectar con el servidor para ajustar la ruta a las carreteras. Se muestran segmentos rectos hasta que la conexión se restablezca.",
+  "editorSnapRateLimitedMessage": "Se alcanzó el límite de peticiones al servicio de rutas. Se usarán segmentos rectos hasta que se reinicie en unos segundos.",
   "editorDrawingModeTooltip": "Modo de dibujo",
   "editorRoutingProfileTooltip": "Modo de ruta",
   "editorRoutingProfileDriving": "Carretera",

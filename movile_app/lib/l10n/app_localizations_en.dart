@@ -496,6 +496,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.';
 
   @override
+  String get editorSnapRateLimitedMessage =>
+      'Reached the routing request limit. Straight segments will be used until it resets in a few seconds.';
+
+  @override
   String get editorDrawingModeTooltip => 'Drawing mode';
 
   @override

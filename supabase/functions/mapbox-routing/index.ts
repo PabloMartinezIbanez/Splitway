@@ -67,19 +67,36 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } },
     );
-    const { data: allowed, error: quotaError } = await adminClient.rpc(
-      "consume_mapbox_quota",
-      {
+    // The RPC returns a single row { allowed, retry_after_seconds }. We use
+    // .single() so the client returns the object directly instead of a list.
+    const { data: quota, error: quotaError } = await adminClient
+      .rpc("consume_mapbox_quota", {
         p_user_id: user.id,
         p_max: RATE_LIMIT_MAX,
         p_window_seconds: RATE_LIMIT_WINDOW_SECONDS,
-      },
-    );
+      })
+      .single();
     if (quotaError) {
       return json({ error: "Rate-limit check failed" }, 500);
     }
+    const allowed = (quota as { allowed?: boolean } | null)?.allowed;
     if (allowed === false) {
-      return json({ error: "Rate limit exceeded. Try again shortly." }, 429);
+      const retryAfter =
+        (quota as { retry_after_seconds?: number } | null)?.retry_after_seconds
+          ?? RATE_LIMIT_WINDOW_SECONDS;
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            // RFC 7231: Retry-After is a delta-seconds value; the client
+            // (RoutingService._parseRetryAfter) reads this to size its backoff.
+            "Retry-After": String(retryAfter),
+          },
+        },
+      );
     }
 
     const mapboxToken = Deno.env.get("MAPBOX_SERVER_TOKEN");

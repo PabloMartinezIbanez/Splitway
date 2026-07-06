@@ -498,6 +498,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo conectar con el servidor para ajustar la ruta a las carreteras. Se muestran segmentos rectos hasta que la conexión se restablezca.';
 
   @override
+  String get editorSnapRateLimitedMessage =>
+      'Se alcanzó el límite de peticiones al servicio de rutas. Se usarán segmentos rectos hasta que se reinicie en unos segundos.';
+
+  @override
   String get editorDrawingModeTooltip => 'Modo de dibujo';
 
   @override

@@ -932,6 +932,12 @@ abstract class AppLocalizations {
   /// **'Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.'**
   String get editorSnapFailedMessage;
 
+  /// No description provided for @editorSnapRateLimitedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached the routing request limit. Straight segments will be used until it resets in a few seconds.'**
+  String get editorSnapRateLimitedMessage;
+
   /// No description provided for @editorDrawingModeTooltip.
   ///
   /// In en, this message translates to:

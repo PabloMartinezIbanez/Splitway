@@ -431,9 +431,13 @@ class _DrawingViewState extends State<_DrawingView> {
               bottom: 64,
               child: _InfoBanner(
                 color: theme.colorScheme.errorContainer,
-                icon: Icons.wifi_off_outlined,
+                icon: controller.snapRateLimited
+                    ? Icons.hourglass_top_outlined
+                    : Icons.wifi_off_outlined,
                 iconColor: theme.colorScheme.onErrorContainer,
-                message: l.editorSnapFailedMessage,
+                message: controller.snapRateLimited
+                    ? l.editorSnapRateLimitedMessage
+                    : l.editorSnapFailedMessage,
                 textColor: theme.colorScheme.onErrorContainer,
               ),
             ),

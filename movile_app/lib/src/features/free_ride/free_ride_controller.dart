@@ -295,11 +295,16 @@ class FreeRideController extends ChangeNotifier {
     // Mapbox "normal time" for the recorded path. One Map Matching call; any
     // failure (offline, no token, no match, <2 points) leaves it null and the
     // ride is saved anyway. Recomputed lazily when the detail screen opens.
+    // Retry on rate-limits — a saved ride's "normal time" is worth waiting for.
     final svc = routingService;
     if (svc != null && run.points.length >= 2) {
-      final d = await svc.matchDuration(run.path, profile: routingProfile);
-      if (d != null) {
-        run = run.copyWith(expectedDuration: d);
+      final r = await svc.matchDuration(
+        run.path,
+        profile: routingProfile,
+        maxRateLimitRetries: 2,
+      );
+      if (r.duration != null) {
+        run = run.copyWith(expectedDuration: r.duration);
       }
     }
 

@@ -1256,15 +1256,21 @@ class _FreeRideDetailScreenState extends State<FreeRideDetailScreen> {
 
     // Lazily compute the Mapbox "normal time" when it is missing (e.g. the ride
     // finished offline) and we now have a routing service. Persist + refresh.
+    // Retry a couple of times on 429; on cooldown the service short-circuits
+    // instantly so we don't spam the endpoint on repeated screen re-opens.
     final svc = widget.routingService;
     if (ride != null &&
         ride.expectedDuration == null &&
         svc != null &&
         ride.points.length >= 2) {
-      final d =
-          await svc.matchDuration(ride.path, profile: widget.routingProfile);
-      if (d == null || !mounted) return;
-      await widget.repository.updateFreeRideExpectedDuration(ride.id, d);
+      final r = await svc.matchDuration(
+        ride.path,
+        profile: widget.routingProfile,
+        maxRateLimitRetries: 2,
+      );
+      if (r.duration == null || !mounted) return;
+      await widget.repository
+          .updateFreeRideExpectedDuration(ride.id, r.duration!);
       final refreshed = await widget.repository.getFreeRideRun(widget.rideId);
       if (!mounted) return;
       setState(() => _ride = refreshed);

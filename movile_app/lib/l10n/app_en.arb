@@ -171,6 +171,7 @@
   "editorRouteSavedSnack": "Saved \"{name}\"",
   "@editorRouteSavedSnack": { "placeholders": { "name": { "type": "String" } } },
   "editorSnapFailedMessage": "Could not reach the server to snap the route to roads. Showing straight segments until the connection is restored.",
+  "editorSnapRateLimitedMessage": "Reached the routing request limit. Straight segments will be used until it resets in a few seconds.",
   "editorDrawingModeTooltip": "Drawing mode",
   "editorRoutingProfileTooltip": "Routing mode",
   "editorRoutingProfileDriving": "Road",

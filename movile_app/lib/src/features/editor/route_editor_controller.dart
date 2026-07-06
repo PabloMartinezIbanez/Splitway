@@ -87,10 +87,21 @@ class RouteEditorController extends ChangeNotifier {
   bool _snapping = false;
   bool get snapping => _snapping;
 
-  /// True when the last snap attempt failed (API error, no connectivity…).
-  /// Resets to false as soon as the next snap succeeds.
-  bool _snapFailed = false;
-  bool get snapFailed => _snapFailed;
+  /// Outcome of the last snap attempt. `null` means "no attempt yet, or the
+  /// last one succeeded"; anything else is a reason the UI can differentiate
+  /// (rate limit vs generic connectivity failure). Resets on next success.
+  RoutingFailureReason? _snapFailure;
+  RoutingFailureReason? get snapFailure => _snapFailure;
+
+  /// True when the last snap attempt failed for any reason. Kept for
+  /// callers that don't care about the specific cause.
+  bool get snapFailed => _snapFailure != null;
+
+  /// True when the last snap attempt was rejected by rate limiting (either
+  /// Mapbox's own or our proxy's), so the UI can show a distinct message.
+  bool get snapRateLimited =>
+      _snapFailure == RoutingFailureReason.rateLimited ||
+      _snapFailure == RoutingFailureReason.cooldown;
 
   List<RouteTemplate> _routes = const [];
   List<RouteTemplate> get routes => _routes;
@@ -261,7 +272,7 @@ class RouteEditorController extends ChangeNotifier {
   }) {
     _cancelSnap();
     _drawing = true;
-    _snapFailed = false;
+    _snapFailure = null;
     _draftName = name;
     _draftDescription = description;
     _draftDifficulty = difficulty;
@@ -277,7 +288,7 @@ class RouteEditorController extends ChangeNotifier {
   void cancelDrawing() {
     _cancelSnap();
     _drawing = false;
-    _snapFailed = false;
+    _snapFailure = null;
     _draftName = '';
     _draftDescription = null;
     _draftDifficulty = RouteDifficulty.medium;
@@ -469,19 +480,20 @@ class RouteEditorController extends ChangeNotifier {
     _snapping = true;
     notifyListeners();
 
-    final result = await routingService!.snapToRoads(waypoints, profile: _routingProfile);
-    final snapped = result?.path;
+    final result = await routingService!
+        .snapToRoads(waypoints, profile: _routingProfile);
 
     if (_snapGeneration != generation) return;
 
     _snapping = false;
-    if (snapped != null && snapped.length >= 2) {
-      _snapFailed = false;
+    final snapped = result.path;
+    if (result.isSuccess && snapped != null && snapped.length >= 2) {
+      _snapFailure = null;
       seg.snappedPath
         ..clear()
         ..addAll(snapped);
     } else {
-      _snapFailed = true;
+      _snapFailure = result.failure?.reason ?? RoutingFailureReason.network;
       seg.snappedPath
         ..clear()
         ..addAll(waypoints);
@@ -507,12 +519,15 @@ class RouteEditorController extends ChangeNotifier {
           if (routingService != null && effective.length >= 2) {
             _snapping = true;
             notifyListeners();
-            final result = await routingService!.snapToRoads(effective, profile: _routingProfile);
+            final result = await routingService!.snapToRoads(
+              effective,
+              profile: _routingProfile,
+            );
             _snapping = false;
             notifyListeners();
-            pathParts.add(result?.path ?? effective);
-            if (result?.duration != null) {
-              expectedTotal += result!.duration!;
+            pathParts.add(result.path ?? effective);
+            if (result.duration != null) {
+              expectedTotal += result.duration!;
             } else {
               expectedComplete = false;
             }
@@ -547,8 +562,13 @@ class RouteEditorController extends ChangeNotifier {
     if (expectedComplete && expectedTotal > Duration.zero) {
       expectedDuration = expectedTotal;
     } else if (routingService != null) {
-      expectedDuration =
-          await routingService!.matchDuration(finalPath, profile: _routingProfile);
+      // Save is a one-shot user-visible action, so retry on rate limits.
+      final r = await routingService!.matchDuration(
+        finalPath,
+        profile: _routingProfile,
+        maxRateLimitRetries: 2,
+      );
+      expectedDuration = r.duration;
     }
 
     final distFirstLast = finalPath.first.distanceTo(finalPath.last);
@@ -695,9 +715,15 @@ class RouteEditorController extends ChangeNotifier {
     }
     if (found == null || found.expectedDuration != null) return;
     if (found.path.length < 2) return;
-    final d = await svc.matchDuration(found.path, profile: _defaultRoutingProfile);
-    if (d == null) return;
-    await _repo.updateRouteExpectedDuration(routeId, d);
+    // Lazy recompute — user just opened the detail. Retry on 429 so a single
+    // rate-limit blip doesn't leave "normal time" empty forever.
+    final r = await svc.matchDuration(
+      found.path,
+      profile: _defaultRoutingProfile,
+      maxRateLimitRetries: 2,
+    );
+    if (r.duration == null) return;
+    await _repo.updateRouteExpectedDuration(routeId, r.duration!);
     await load();
   }
 
