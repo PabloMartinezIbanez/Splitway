@@ -78,6 +78,12 @@ class FreeRideController extends ChangeNotifier {
   /// from the GPS course alone.
   bool _useCompassHeading = true;
 
+  /// Last GPS-derived course we've seen this ride. Used in the motorized
+  /// path to freeze the camera bearing when the vehicle stops (GPS course
+  /// becomes unreliable at standstill), instead of leaving the map without
+  /// a bearing. Non-motorized rides keep using the compass at low speed.
+  double? _lastGpsCourseDeg;
+
   DateTime? _recordingStartedAt;
   DateTime? _pausedAt;
   Duration _accumulatedElapsed = Duration.zero;
@@ -104,6 +110,7 @@ class FreeRideController extends ChangeNotifier {
     _backgroundActive = backgroundActive;
     _distanceFilterMeters = distanceFilterMeters;
     _useCompassHeading = useCompassHeading;
+    _lastGpsCourseDeg = null;
 
     if (_backgroundActive) {
       await BackgroundTrackingService.startTracking(
@@ -230,15 +237,20 @@ class FreeRideController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Latest known heading in degrees (0 = north, clockwise). In a motorized
-  /// vehicle the GPS course is used directly. Otherwise it combines the
-  /// phone's magnetic compass (so the map rotates when the user turns the
-  /// device) with the GPS course (so the map snaps to direction of travel
-  /// when actually moving). The blend is speed-weighted: at standstill the
-  /// compass wins; above ~4 m/s the GPS course wins.
+  /// Latest known heading in degrees (0 = north, clockwise).
+  ///
+  /// In a motorized vehicle (phone mounted, [_useCompassHeading] false) the
+  /// GPS course is used exclusively: current if available, last known
+  /// otherwise, so the map keeps pointing forward when the user stops
+  /// instead of spinning to wherever the phone's top edge points.
+  ///
+  /// On foot or by bike (phone hand-held, [_useCompassHeading] true) the
+  /// magnetic compass is blended with the GPS course via [fusedBearingDeg]
+  /// — compass wins at standstill so the map rotates as the user turns the
+  /// device to look around, GPS wins above ~4 m/s.
   double? get currentBearingDeg {
     final gpsCourse = _gpsCourseDeg();
-    if (!_useCompassHeading) return gpsCourse;
+    if (!_useCompassHeading) return gpsCourse ?? _lastGpsCourseDeg;
     final compass = _headingService.currentHeadingDeg;
     final speed = _engine?.snapshot.currentSpeedMps ?? 0.0;
     return fusedBearingDeg(
@@ -252,15 +264,22 @@ class FreeRideController extends ChangeNotifier {
   /// reliable estimate is available. Uses the GPS-reported bearing when
   /// present; otherwise falls back to the bearing between the last two
   /// ingested points (only if they're more than 1 m apart, to avoid noise).
+  /// Every non-null result is cached in [_lastGpsCourseDeg] so the camera
+  /// can freeze on the last known direction while the vehicle is stopped.
   double? _gpsCourseDeg() {
     if (_ingested.isEmpty) return null;
     final last = _ingested.last;
     final reported = last.bearingDeg;
-    if (reported != null && reported >= 0) return reported;
+    if (reported != null && reported >= 0) {
+      _lastGpsCourseDeg = reported;
+      return reported;
+    }
     if (_ingested.length < 2) return null;
     final prev = _ingested[_ingested.length - 2];
     if (prev.location.distanceTo(last.location) < 1.0) return null;
-    return prev.location.bearingTo(last.location);
+    final course = prev.location.bearingTo(last.location);
+    _lastGpsCourseDeg = course;
+    return course;
   }
 
   Future<FreeRideRun?> finishRecording({String routingProfile = 'driving'}) async {

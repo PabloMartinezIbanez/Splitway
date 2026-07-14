@@ -715,7 +715,7 @@ class _SplitwayMapState extends State<SplitwayMap>
           mbx.PolylineAnnotationOptions(
             geometry: tipGeom,
             lineColor: 0xFFE65100,
-            lineWidth: 3,
+            lineWidth: 5,
             lineOpacity: 0.85,
           ),
         );
@@ -752,6 +752,23 @@ class _SplitwayMapState extends State<SplitwayMap>
     final bearing = notifier?.bearing;
     final pitch = notifier?.pitch;
     final durationMs = notifier?.animationDuration.inMilliseconds ?? 800;
+    // Navigation follow-mode: shift the focal point downward so the user
+    // marker sits ~25% from the bottom of the map, giving ~75% of the view to
+    // what's ahead — matching Google Maps' turn-by-turn perspective. The
+    // pitch value is the discriminator: only recording/free-ride flyTos pass
+    // it; preview/editor flyTos leave padding null and stay centred.
+    mbx.MbxEdgeInsets? padding;
+    if (pitch != null) {
+      final size = context.size;
+      if (size != null) {
+        padding = mbx.MbxEdgeInsets(
+          top: size.height * 0.5,
+          left: 0,
+          bottom: 0,
+          right: 0,
+        );
+      }
+    }
     _map!.flyTo(
       mbx.CameraOptions(
         center: mbx.Point(
@@ -760,6 +777,7 @@ class _SplitwayMapState extends State<SplitwayMap>
         zoom: 17,
         bearing: bearing,
         pitch: pitch,
+        padding: padding,
       ),
       mbx.MapAnimationOptions(duration: durationMs),
     ).catchError((_) {
@@ -1224,7 +1242,7 @@ class _SplitwayMapState extends State<SplitwayMap>
             await lineMgr.create(mbx.PolylineAnnotationOptions(
               geometry: _toLineString(segments[i]),
               lineColor: kSectorColors[i % kSectorColors.length].toARGB32(),
-              lineWidth: 4,
+              lineWidth: 7,
             ));
           } on PlatformException {
             return;
@@ -1236,7 +1254,7 @@ class _SplitwayMapState extends State<SplitwayMap>
           await lineMgr.create(mbx.PolylineAnnotationOptions(
             geometry: _toLineString(r.path),
             lineColor: 0xFF1565C0,
-            lineWidth: 4,
+            lineWidth: 7,
           ));
         } on PlatformException {
           return;
@@ -1291,7 +1309,7 @@ class _SplitwayMapState extends State<SplitwayMap>
           await lineMgr.create(mbx.PolylineAnnotationOptions(
             geometry: _toLineString(staticPath),
             lineColor: 0xFFE65100,
-            lineWidth: 3,
+            lineWidth: 5,
             lineOpacity: 0.85,
           ));
         } on PlatformException {
@@ -1458,7 +1476,7 @@ class _SplitwayMapState extends State<SplitwayMap>
         sourceId: _kHeatmapSourceId,
         lineCap: mbx.LineCap.ROUND,
         lineJoin: mbx.LineJoin.ROUND,
-        lineWidth: 4,
+        lineWidth: 5,
         lineGradientExpression: expr,
       ));
     } on PlatformException {

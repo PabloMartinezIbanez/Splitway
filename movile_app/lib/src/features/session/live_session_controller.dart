@@ -125,15 +125,26 @@ class LiveSessionController extends ChangeNotifier {
   /// from the GPS course alone.
   bool _useCompassHeading = true;
 
-  /// Latest known heading in degrees (0 = north, clockwise). In a motorized
-  /// vehicle the GPS course is used directly. Otherwise it blends the
-  /// phone's magnetic compass (so the camera rotates when the user turns
-  /// the device) with the GPS-derived course (so it snaps to direction of
-  /// travel when actually moving). At standstill the compass wins; above
-  /// ~4 m/s the GPS course wins.
+  /// Last GPS-derived course we've seen this session. Used in the motorized
+  /// path to freeze the camera bearing when the vehicle stops (GPS course
+  /// becomes unreliable at standstill), instead of leaving the map without
+  /// a bearing. Non-motorized rides keep using the compass at low speed.
+  double? _lastGpsCourseDeg;
+
+  /// Latest known heading in degrees (0 = north, clockwise).
+  ///
+  /// In a motorized vehicle (phone mounted, [_useCompassHeading] false) the
+  /// GPS course is used exclusively: current if available, last known
+  /// otherwise, so the map keeps pointing forward when the user stops
+  /// instead of spinning to wherever the phone's top edge points.
+  ///
+  /// On foot or by bike (phone hand-held, [_useCompassHeading] true) the
+  /// magnetic compass is blended with the GPS course via [fusedBearingDeg]
+  /// — compass wins at standstill so the map rotates as the user turns the
+  /// device to look around, GPS wins above ~4 m/s.
   double? get currentBearingDeg {
     final gpsCourse = _gpsCourseDeg();
-    if (!_useCompassHeading) return gpsCourse;
+    if (!_useCompassHeading) return gpsCourse ?? _lastGpsCourseDeg;
     final compass = _headingService.currentHeadingDeg;
     final speed = _tracker?.snapshot.lastSpeedMps ?? 0.0;
     return fusedBearingDeg(
@@ -148,11 +159,16 @@ class LiveSessionController extends ChangeNotifier {
     if (t == null || t.ingested.isEmpty) return null;
     final last = t.ingested.last;
     final reported = last.bearingDeg;
-    if (reported != null && reported >= 0) return reported;
+    if (reported != null && reported >= 0) {
+      _lastGpsCourseDeg = reported;
+      return reported;
+    }
     if (t.ingested.length < 2) return null;
     final prev = t.ingested[t.ingested.length - 2];
     if (prev.location.distanceTo(last.location) < 1.0) return null;
-    return prev.location.bearingTo(last.location);
+    final course = prev.location.bearingTo(last.location);
+    _lastGpsCourseDeg = course;
+    return course;
   }
 
   Future<void> load() async {
@@ -220,6 +236,7 @@ class LiveSessionController extends ChangeNotifier {
     _includeHistorical = includeHistorical;
     _lastRunDiscarded = false;
     _autoFinishing = false;
+    _lastGpsCourseDeg = null;
     _sessionName = (name != null && name.trim().isNotEmpty) ? name.trim() : null;
     if (includeHistorical) {
       try {
