@@ -518,11 +518,9 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
           left: 0,
           right: 0,
           bottom: 0,
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
                 if (!ctrl.backgroundActive &&
                     ctrl.source == TrackingSource.realGps) ...[
                   Padding(
@@ -586,7 +584,12 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                     borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(20)),
                   ),
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 16,
+                    bottom: 16 + MediaQuery.paddingOf(context).bottom,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -635,7 +638,6 @@ class _LiveSessionScreenState extends State<LiveSessionScreen>
                 ),
               ],
             ),
-          ),
         ),
         if (ctrl.stage == LiveSessionStage.summary && ctrl.result != null)
           _FinishOverlay(

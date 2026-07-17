@@ -392,11 +392,9 @@ class _FreeRideScreenState extends State<FreeRideScreen>
           left: 0,
           right: 0,
           bottom: 0,
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
                 if (!ctrl.backgroundActive) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -457,7 +455,12 @@ class _FreeRideScreenState extends State<FreeRideScreen>
                     borderRadius:
                         const BorderRadius.vertical(top: Radius.circular(20)),
                   ),
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 16,
+                    bottom: 16 + MediaQuery.paddingOf(context).bottom,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -507,7 +510,6 @@ class _FreeRideScreenState extends State<FreeRideScreen>
                 ),
               ],
             ),
-          ),
         ),
       ],
     );

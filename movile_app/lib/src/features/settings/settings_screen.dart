@@ -180,9 +180,15 @@ class SettingsScreen extends StatelessWidget {
               trailing: DropdownButton<GpsSamplingInterval>(
                 value: settingsController.gpsSamplingInterval,
                 underline: const SizedBox(),
+                isDense: true,
                 onChanged: (v) {
                   if (v != null) settingsController.setGpsSamplingInterval(v);
                 },
+                selectedItemBuilder: (context) => const [
+                  Align(alignment: Alignment.centerRight, child: Text('1 s')),
+                  Align(alignment: Alignment.centerRight, child: Text('2 s')),
+                  Align(alignment: Alignment.centerRight, child: Text('5 s')),
+                ],
                 items: [
                   DropdownMenuItem(
                     value: GpsSamplingInterval.oneSecond,

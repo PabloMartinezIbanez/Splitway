@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:splitway_mobile/l10n/app_localizations.dart';
 
 import '../../services/auth/auth_service.dart';
@@ -7,6 +8,12 @@ import '../../services/profile/profile_service.dart';
 import '../../services/sync/sync_service.dart';
 
 import 'sync_status_display.dart';
+
+// Cached across drawer rebuilds so we only hit the platform channel once.
+Future<String>? _appVersionFuture;
+Future<String> _loadAppVersion() =>
+    _appVersionFuture ??=
+        PackageInfo.fromPlatform().then((info) => info.version);
 
 /// Dark-minimal drawer for Splitway.
 ///
@@ -273,10 +280,7 @@ class _LoggedInContent extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                l.drawerAppVersion('0.4.0'),
-                style: const TextStyle(color: Color(0xFF455A64), fontSize: 10),
-              ),
+              const _VersionText(),
               GestureDetector(
                 onTap: () => _signOutWithSync(context, authService),
                 child: Text(
@@ -413,17 +417,35 @@ class _LoggedOutContent extends StatelessWidget {
         ),
 
         // ---- Footer ----
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              l.drawerAppVersion('0.4.0'),
-              style: const TextStyle(color: Color(0xFF455A64), fontSize: 10),
-            ),
+            child: _VersionText(),
           ),
         ),
       ],
+    );
+  }
+}
+
+// =============================================================================
+// Version footer text (reads from pubspec via package_info_plus)
+// =============================================================================
+
+class _VersionText extends StatelessWidget {
+  const _VersionText();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    const style = TextStyle(color: Color(0xFF455A64), fontSize: 10);
+    return FutureBuilder<String>(
+      future: _loadAppVersion(),
+      builder: (context, snapshot) {
+        final version = snapshot.data ?? '';
+        return Text(l.drawerAppVersion(version), style: style);
+      },
     );
   }
 }

@@ -44,7 +44,7 @@ const _kMapStyleKey = 'splitway_map_style';
 
 /// Camera tilt used while recording so the map shows what's ahead instead of
 /// a top-down view, mirroring Google Maps' navigation perspective.
-const double kNavigationCameraPitchDeg = 45.0;
+const double kNavigationCameraPitchDeg = 60.0;
 
 /// A notifier that always fires, even when set to the same value.
 /// [ValueNotifier] silently ignores duplicate values, which breaks
